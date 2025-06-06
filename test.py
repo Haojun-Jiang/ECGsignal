@@ -10,7 +10,7 @@ label_map = load_label_map('D:\study\Msc project\project\scr\classes.txt')
 
 # 构建 Dataset 实例
 dataset = ECGDataset(
-    data_dir='data/training/chapman_shaoxing/g1',  # 替换为你的路径
+    data_dirs=['data/training/chapman_shaoxing','data/training/ningbo'],
     label_map=label_map,
     signal_length=5000
 )
@@ -20,7 +20,7 @@ print("Total samples:", len(dataset))
 # 获取单个样本
 signal, label = dataset[0]
 print("Signal:", signal)   # 应该是 (12, 5000)
-print("Label:", label)          # 应该是多标签 one-hot，比如 [1, 0, 0]
+print("Label:", label)
 
 # 构建 DataLoader
 loader = DataLoader(dataset, batch_size=8, shuffle=True)

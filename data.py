@@ -6,22 +6,26 @@ import numpy as np
 import helper_code as hc
 
 class ECGDataset(Dataset):
-    def __init__(self, data_dir, label_map, signal_length=5000):
-        self.data_dir = data_dir
+    def __init__(self, data_dirs, label_map, signal_length=5000):
+        if isinstance(data_dirs, str):
+            data_dirs = [data_dirs]
+        self.data_dirs = data_dirs
         self.label_map = label_map
         self.signal_length = signal_length
         self.samples = self._collect_samples()
     
     def _collect_samples(self):
         samples = []
-        for root, _, files in os.walk(self.data_dir):
-            for f in files:
-                if f.endswith('.hea'):
-                    base = f[:-4]
-                    hea_path = os.path.join(root, base + '.hea')
-                    mat_path = os.path.join(root, base + '.mat')
-                    if os.path.isfile(mat_path):
-                        samples.append((hea_path, mat_path))
+        for data_dir in self.data_dirs:
+            for root, _, files in os.walk(data_dir):
+                for f in files:
+                    if f.endswith('.hea'):
+                        base = f[:-4]
+                        hea_path = os.path.join(root, base + '.hea')
+                        mat_path = os.path.join(root, base + '.mat')
+                        if os.path.exists(mat_path):
+                            samples.append((hea_path, mat_path))
+                        # samples.append((hea_path, mat_path))
         return samples
     
     def __len__(self):
