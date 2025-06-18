@@ -51,22 +51,23 @@ def load_header(header_file):
     return header
 
 # Load recording file as an array.
-def load_recording(recording_file, header=None, key='val'):
+def load_recording(recording_file, header=None, leads=None,key='val'):
     from scipy.io import loadmat
     recording = loadmat(recording_file)[key]
-    if header:
-        recording = choose_leads(recording, header)
+    if header and leads:
+        recording = choose_leads(recording, header, leads)
     return recording
 
 # Choose leads from the recording file.
-def choose_leads(recording, header):
-    available_leads = get_leads(header)
-    num_leads = len(available_leads)
+def choose_leads(recording, header, leads):
+    num_leads = len(leads)
     num_samples = np.shape(recording)[1]
     chosen_recording = np.zeros((num_leads, num_samples), recording.dtype)
-    for i, lead in enumerate(available_leads):
-        j = available_leads.index(lead)
-        chosen_recording[i, :] = recording[j, :]
+    available_leads = get_leads(header)
+    for i, lead in enumerate(leads):
+        if lead in available_leads:
+            j = available_leads.index(lead)
+            chosen_recording[i, :] = recording[j, :]
     return chosen_recording
 
 # Get recording ID.
@@ -195,23 +196,32 @@ def get_baselines(header, leads):
     return baselines
 
 # Get labels from header.
-def get_labels(header, label_map):
-    labels = np.zeros(len(label_map), dtype=np.float32)
+def get_labels(header):
+    labels = list()
+    scored_labels = np.asarray(pd.read_csv('D:\study\Msc project\project\scr\dx_mapping_scored.csv').iloc[:,1], dtype="str")
     for l in header.split('\n'):
         if l.startswith('# Dx'):
             try:
                 entries = l.split(': ')[1].split(',')
                 for entry in entries:
-                    if any(j == entry for j in label_map):
-                        labels[label_map[entry]] = 1.0
-                        if(labels[9]):
-                            label = 1 # AF
-                        elif(labels[21]):
-                            label = 0 # Normal
-                        elif(labels[10] | labels[20] | labels[16] | labels[26] | labels[17] | labels[23] | labels[1] | labels[14] | labels[8] | labels[24] | labels[19] | labels[22] | labels[7] | labels[2]):
-                            label = 2 # Arrhythmia
-                        else:
-                            label = 3 # Other
+                    if any(j == entry for j in scored_labels):
+                        labels.append(entry.strip())
             except:
                 pass
-    return label
+    return map_class_to_single(labels)
+
+def map_class_to_single(labels):
+    AF_DX = {'164889003'}
+    NOMAL_DX = {'426783006'}
+    OTHER_DX = {'39732003','251146004','10370003','365413008','164917005','47665007','164934002','59931005'}
+
+    if(len(labels)==0):
+        return 2       # other
+    elif any(j in AF_DX for j in labels):
+        return 1        # AF
+    elif any(j in NOMAL_DX for j in labels):
+        return 0        # Normal
+    elif any(j in OTHER_DX for j in labels):
+        return 2        # other
+    else:
+        return 3        # other diseases

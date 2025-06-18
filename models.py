@@ -36,13 +36,13 @@ class cnn_1d(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(256 * 312, 256),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.5),
             nn.Linear(256, classes_n)
         )
 
     def forward(self, x):
         x = self.features(x)
-        x = x.view(x.size(0), -1)
+        # x = x.view(x.size(0), -1)
         # x = self.classifier(x)
         return x
     
@@ -70,17 +70,17 @@ class bi_lstm(nn.Module):
             nn.Linear(128, output_size)
         )
 
-def forward(self, x):
-    lstm_out = self.lstm(x)
-    out = lstm_out[:,-1,:]
-    out = self.classifier(out)
-    return out
+    def forward(self, x):
+        lstm_out, _ = self.lstm(x)
+        out = lstm_out[:, -1, :]
+        out = self.classifier(out)   #[B, output_size]
+        return out
 
 class cnn_feed_lstm(nn.Module):
-    def __init__(self, classes_n = 4, cnn_model, rnn_model):
+    def __init__(self, cnn_model, rnn_model, classes_n = 4):
         super(cnn_feed_lstm, self).__init__()
         self.cnn = cnn_model()
-        self.rnn = rnn_model()
+        self.lstm = rnn_model()
     
     def forward(self, x):
         feature = self.cnn(x)

@@ -6,13 +6,14 @@ import numpy as np
 import helper_code as hc
 
 class ECGDataset(Dataset):
-    def __init__(self, data_dirs, label_map, signal_length=5000):
+    def __init__(self, data_dirs, label_map, leads, signal_length=5000):
         if isinstance(data_dirs, str):
             data_dirs = [data_dirs]
         self.data_dirs = data_dirs
         self.label_map = label_map
         self.signal_length = signal_length
         self.samples = self._collect_samples()
+        self.leads = leads
     
     def _collect_samples(self):
         samples = []
@@ -33,9 +34,14 @@ class ECGDataset(Dataset):
     
     def __getitem__(self, idx):
         header_path, mat_path = self.samples[idx]
+        # load header and parse Dx
+        head = hc.load_header(header_path)
+        # print(head)
+        label = hc.get_labels(head)
+        # print(label)
 
         # load signal
-        signal = hc.load_recording(mat_path)  # shape (12, 5000)
+        signal = hc.load_recording(mat_path, header=head, leads = self.leads)  # shape (12, 5000)
 
         # truncate or pad
         if signal.shape[1] > self.signal_length:
@@ -44,10 +50,5 @@ class ECGDataset(Dataset):
             pad_len = self.signal_length - signal.shape[1]
             signal = np.pad(signal, ((0, 0), (0, pad_len)))
 
-        # load header and parse Dx
-        head = hc.load_header(header_path)
-        # print(head)
-        label = hc.get_labels(head, self.label_map)
-        # print(label)
-
-        return torch.tensor(signal, dtype=torch.float32), torch.tensor(label, dtype=torch.float32)
+        
+        return torch.tensor(signal, dtype=torch.float32), torch.tensor(label, dtype=torch.int64)
