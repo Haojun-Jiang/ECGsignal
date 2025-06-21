@@ -1,4 +1,4 @@
-from data import ECGDataset
+from data import ECGDataset, ECG_RRI
 from torch.utils.data import DataLoader
 from collections import Counter
 import pandas as pd
@@ -12,24 +12,23 @@ def load_label_map(txt_path):
 label_map = load_label_map('D:\study\Msc project\project\scr\classes.txt')
 
 # 构建 Dataset 实例
-dataset = ECGDataset(
-    data_dirs=['data/training/chapman_shaoxing','data/training/ningbo'],
+dataset = ECG_RRI(
+    data_dirs=['data/training/chapman_shaoxing'],
     label_map=label_map,
     signal_length=5000,
     leads=["II"]
 )
 # 检查样本数量
 
-
 # 获取单个样本
-# for signal, label in dataset:
-#     print(signal)
-#     break
+for signal, label in dataset:
+    print(signal)
+    break
 
 # 构建 DataLoader
 loader = DataLoader(dataset, batch_size=128, shuffle=True)
 
-# 遍历一个 batch
-for batch_signals, batch_labels in loader:
-    print("Batch signals:", batch_signals.shape)  # (8, 12, 5000)
-    print("Batch labels:", batch_labels)    # (8, num_classes)
+# # 遍历一个 batch
+# for batch_signals, batch_labels in loader:
+#     print("Batch signals:", batch_signals.shape)  # (8, 12, 5000)
+#     print("Batch labels:", batch_labels)    # (8, num_classes)

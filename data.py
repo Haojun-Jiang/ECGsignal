@@ -41,8 +41,8 @@ class ECGDataset(Dataset):
         # print(label)
 
         # load signal
-        signal = hc.load_recording(mat_path, header=head, leads = self.leads)  # shape (12, 5000)
-
+        signal = self.Normalize(hc.load_recording(mat_path, header=head, leads = self.leads))  # shape (1, 5000)
+        signal = self.scaling(signal)
         # truncate or pad
         if signal.shape[1] > self.signal_length:
             signal = signal[:, :self.signal_length]
@@ -52,3 +52,18 @@ class ECGDataset(Dataset):
 
         
         return torch.tensor(signal, dtype=torch.float32), torch.tensor(label, dtype=torch.int64)
+
+    def Normalize(self, signal):
+        signal = np.asarray(signal)
+        if signal.size == 0:
+            raise ValueError("Input is empty")
+        
+        std = np.std(signal)
+        if std == 0:
+            return signal - np.mean(signal)
+        
+        return (signal - np.mean(signal)) / std
+
+    def scaling(self, signal):
+        return signal * 1.2
+

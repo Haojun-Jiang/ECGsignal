@@ -8,13 +8,19 @@ class cnn_1d(nn.Module):
     def __init__(self, classes_n = 4):
         super(cnn_1d, self).__init__() # input 1 x 5000
         self.features = nn.Sequential(
-            nn.Conv1d(1, 32, kernel_size=5, padding=2),
+            nn.Conv1d(1, 32, kernel_size=3, padding=1),
+            nn.BatchNorm1d(32),
+            nn.ReLU(),
+            nn.Conv1d(32, 32, kernel_size=3, padding=1),
             nn.BatchNorm1d(32),
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2),  # => 32 × 2500
             nn.Dropout(0.1),
 
-            nn.Conv1d(32, 64, kernel_size=5, padding=2),
+            nn.Conv1d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Conv1d(64, 64, kernel_size=3, padding=1),
             nn.BatchNorm1d(64),
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2),  # => 64 × 1250
@@ -79,8 +85,8 @@ class bi_lstm(nn.Module):
 class cnn_feed_lstm(nn.Module):
     def __init__(self, cnn_model, rnn_model, classes_n = 4):
         super(cnn_feed_lstm, self).__init__()
-        self.cnn = cnn_model()
-        self.lstm = rnn_model()
+        self.cnn = cnn_model
+        self.lstm = rnn_model
     
     def forward(self, x):
         feature = self.cnn(x)

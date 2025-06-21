@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-
+import pywt as pw
 
 def is_number(x):
     try:
@@ -225,3 +225,58 @@ def map_class_to_single(labels):
         return 2        # other
     else:
         return 3        # other diseases
+# get QRS group
+def qrs_detect(signal, sample_rate=500, max_bpm=300):
+    coeffs = pw.swt(signal, wavelet="haar", level=2, start_level=0, axis=-1)
+    d2 = coeffs[1][1]
+    d2 = np.asarray(d2).flatten()
+
+    avg = np.mean(d2)
+    std = np.std(d2)
+    sig_diff = np.abs(d2 - avg)
+    sig_thres = np.where(sig_diff > 2.0 * std, sig_diff, 0)
+
+    # print(f"[DEBUG] Thresholded sig_thres: max={sig_thres.max()}, nonzero={np.count_nonzero(sig_thres)}")
+
+    window = int(0.3 * sample_rate)
+    signal = signal[0]  # ← 调整成固定窗口大小（如150）
+    sig_len = len(signal)
+    # print(sig_len)
+    n_windows = int(sig_len / window)
+    modulus, qrs = [], []
+
+    for i in range(n_windows):
+        start = i * window
+        end = min((i + 1) * window, sig_len)
+        mx = np.max(sig_thres[start:end])
+        # print(f"Window {i}: max = {mx}, nonzero = {np.count_nonzero(sig_thres[start:end])}")
+
+        if mx > 0:
+            loc = start + np.argmax(sig_thres[start:end])
+            modulus.append((loc, mx))
+
+    merge_width = int(0.25 * sample_rate)
+    i = 0
+    while i < len(modulus) - 1:
+        ann = modulus[i][0]
+        if modulus[i + 1][0] - modulus[i][0] < merge_width:
+            if modulus[i + 1][1] > modulus[i][1]:
+                ann = modulus[i + 1][0]
+            i += 1
+        qrs.append(ann)
+        i += 1
+
+    window_check = int(sample_rate / 6)
+    r_peaks = []
+    for loc in qrs:
+        start = max(0, loc - window_check)
+        end = min(sig_len, loc + window_check)
+        wdw = np.abs(signal[start:end] - np.mean(signal[start:end]))
+        if len(wdw) == 0:
+            continue
+        pk = np.argmax(wdw)
+        r_peaks.append(start + pk)
+
+    r_peaks = np.array(r_peaks)
+    print(f"[DEBUG] Detected R peaks: {r_peaks}")
+    return r_peaks
