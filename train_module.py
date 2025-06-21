@@ -73,10 +73,10 @@ def train_module(model, train_loader, val_loader, optimizer, criterion, device, 
         'val_loss': val_loss_list,
         'train_acc': train_acc_list,
         'val_acc': val_acc_list,
-        'y_true': y_true_list,
-        'y_pred': y_pred_list,
-        'y_true_val' : y_true_val_list,
-        'y_pred_val' : y_pred_val_list,
+        'y_true': y_true_list[-1],
+        'y_pred': y_pred_list[-1],
+        'y_true_val' : y_true_val_list[-1],
+        'y_pred_val' : y_pred_val_list[-1],
         'y_score': y_score_list
     }
 

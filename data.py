@@ -67,3 +67,34 @@ class ECGDataset(Dataset):
     def scaling(self, signal):
         return signal * 1.2
 
+class ECGsegments(Dataset):
+    def __init__(self, data_path, segments,segment_length=1000):
+        if isinstance(data_path, str):
+            data_dir = [data_path]
+        self.data_path = data_dir
+        self.segment_length = segment_length
+        self.samples = segments
+    
+    def __len__(self):
+        return len(self.samples)
+    
+    def __getitem__(self, idx):
+        signal, label = self.samples[idx][:1000], self.samples[idx][1000]
+        signal = self.Normalize(signal)
+        signal = self.scaling(signal)
+        return torch.tensor(signal, dtype=torch.float32).unsqueeze(), torch.tensor(label, dtype=torch.int64)
+    
+    def Normalize(self, signal):
+        signal = np.asarray(signal)
+        if signal.size == 0:
+            raise ValueError("Input is empty")
+        
+        std = np.std(signal)
+        if std == 0:
+            return signal - np.mean(signal)
+        
+        return (signal - np.mean(signal)) / std
+    
+    def scaling(self, signal):
+        return signal * 1.2
+

@@ -226,36 +226,28 @@ def map_class_to_single(labels):
     else:
         return 3        # other diseases
 # get QRS group
-def qrs_detect(signal, sample_rate=500, max_bpm=300):
+def qrs_detection(signal, sample_rate=500, max_bpm=300):
     coeffs = pw.swt(signal, wavelet="haar", level=2, start_level=0, axis=-1)
-    d2 = coeffs[1][1]
-    d2 = np.asarray(d2).flatten()
+    d2 = coeffs[1][1]  # 2nd level detail coefficients
 
     avg = np.mean(d2)
     std = np.std(d2)
-    sig_diff = np.abs(d2 - avg)
-    sig_thres = np.where(sig_diff > 2.0 * std, sig_diff, 0)
+    sig_thres = [abs(i) if abs(i) > 2.0 * std else 0 for i in d2 - avg]
 
-    # print(f"[DEBUG] Thresholded sig_thres: max={sig_thres.max()}, nonzero={np.count_nonzero(sig_thres)}")
-
-    window = int(0.3 * sample_rate)
-    signal = signal[0]  # ← 调整成固定窗口大小（如150）
+    window = int((60.0 / max_bpm) * sample_rate)
     sig_len = len(signal)
-    # print(sig_len)
+    # print(len(signal))
     n_windows = int(sig_len / window)
     modulus, qrs = [], []
 
     for i in range(n_windows):
         start = i * window
-        end = min((i + 1) * window, sig_len)
-        mx = np.max(sig_thres[start:end])
-        # print(f"Window {i}: max = {mx}, nonzero = {np.count_nonzero(sig_thres[start:end])}")
-
+        end = min([(i + 1) * window, sig_len])
+        mx = max(sig_thres[start:end])
         if mx > 0:
-            loc = start + np.argmax(sig_thres[start:end])
-            modulus.append((loc, mx))
+            modulus.append((start + np.argmax(sig_thres[start:end]), mx))
 
-    merge_width = int(0.25 * sample_rate)
+    merge_width = int(0.2 * sample_rate)
     i = 0
     while i < len(modulus) - 1:
         ann = modulus[i][0]
@@ -267,16 +259,60 @@ def qrs_detect(signal, sample_rate=500, max_bpm=300):
         i += 1
 
     window_check = int(sample_rate / 6)
-    r_peaks = []
-    for loc in qrs:
+    r_peaks = [0] * len(qrs)
+
+    for i, loc in enumerate(qrs):
         start = max(0, loc - window_check)
         end = min(sig_len, loc + window_check)
-        wdw = np.abs(signal[start:end] - np.mean(signal[start:end]))
-        if len(wdw) == 0:
-            continue
+        wdw = np.absolute(signal[start:end] - np.mean(signal[start:end]))
         pk = np.argmax(wdw)
-        r_peaks.append(start + pk)
+        r_peaks[i] = start + pk
 
-    r_peaks = np.array(r_peaks)
-    print(f"[DEBUG] Detected R peaks: {r_peaks}")
-    return r_peaks
+    return np.array(r_peaks)
+
+# get segmants
+def get_segments(signal, rpeaks, label, length=1000):
+    n = rpeaks.shape[0]
+    if n <= 8:
+        return None
+
+    segments = []
+
+    for i in range(2, n - 6):
+        l, r = rpeaks[i], rpeaks[i + 3]
+        padding = length - (r - l)
+        if padding % 2 == 0:
+            l_padding = r_padding = padding // 2
+        else:
+            l_padding = (padding - 1) // 2
+            r_padding = (padding + 1) // 2
+
+        if l_padding > l:
+            r_padding += l_padding - l
+            l_padding = l
+
+        if r + r_padding >= signal.shape[0]:
+            r_padding = signal.shape[0] - 1 - r
+            l_padding = l - signal.shape[0] + 1 + length
+        
+        segment = signal[l - l_padding : r + r_padding].copy()
+        if len(segment) == length:
+            segments.append(segment)
+
+    segments = np.array(segments)
+    labels = np.repeat(label, segments.shape[0])
+    return np.hstack((segments, labels[:, np.newaxis]))
+
+def collect_samples(data_dirs):
+    samples = []
+    for data_dir in data_dirs:
+        for root, _, files in os.walk(data_dir):
+            for f in files:
+                if f.endswith('.hea'):
+                    base = f[:-4]
+                    hea_path = os.path.join(root, base + '.hea')
+                    mat_path = os.path.join(root, base + '.mat')
+                    if os.path.exists(mat_path):
+                        samples.append((hea_path, mat_path))
+                    # samples.append((hea_path, mat_path))
+    return samples
