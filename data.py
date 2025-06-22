@@ -4,6 +4,7 @@ from torch.utils.data import Dataset
 import wfdb
 import numpy as np
 import helper_code as hc
+from PIL import Image
 
 class ECGDataset(Dataset):
     def __init__(self, data_dirs, label_map, leads, signal_length=5000):
@@ -67,6 +68,7 @@ class ECGDataset(Dataset):
     def scaling(self, signal):
         return signal * 1.2
 
+
 class ECGsegments(Dataset):
     def __init__(self, data_path, segments,segment_length=1000):
         if isinstance(data_path, str):
@@ -82,7 +84,9 @@ class ECGsegments(Dataset):
         signal, label = self.samples[idx][:1000], self.samples[idx][1000]
         signal = self.Normalize(signal)
         signal = self.scaling(signal)
-        return torch.tensor(signal, dtype=torch.float32).unsqueeze(), torch.tensor(label, dtype=torch.int64)
+        signal_tensor = torch.tensor(signal, dtype=torch.float32).unsqueeze(0)
+        label_tensor = torch.tensor(label, dtype=torch.int64)
+        return signal_tensor, label_tensor
     
     def Normalize(self, signal):
         signal = np.asarray(signal)
@@ -98,3 +102,38 @@ class ECGsegments(Dataset):
     def scaling(self, signal):
         return signal * 1.2
 
+# spectrogram
+class STFTgraph (Dataset):
+    def __init__(self, root_dir, transform = None):
+        self.root_dir = root_dir
+        self.transform = transform
+
+        self.images = []
+        self.labels = []
+        self.class_to_index = {}
+
+        classes = sorted(os.listdir(root_dir))
+        for i, class_name in enumerate(classes):
+            class_folder = os.path.join(root_dir, class_name)
+            if os.path.isdir(class_folder):
+                self.class_to_index[class_name] = i
+                for image_name in os.listdir(class_folder):
+                    img_path = os.path.join(class_folder, image_name)
+                    self.images.append(img_path)
+                    self.labels.append(class_name)
+
+        self.classes = sorted(set(self.labels))
+        self.class_to_index = {class_name: i for i, class_name in enumerate(self.classes)}
+
+    def __len__ (self):
+        return len(self.images)
+    
+    def __getitem__ (self, index):
+        img_path = self.images[index]
+        label = self.class_to_index[self.labels[index]]
+        image = Image.open(img_path).convert('L').resize((256, 256))
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, label

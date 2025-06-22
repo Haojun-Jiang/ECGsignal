@@ -2,6 +2,9 @@ import os
 import numpy as np
 import pandas as pd
 import pywt as pw
+import matplotlib.pyplot as plt
+from scipy.signal import stft
+from tqdm import tqdm
 
 def is_number(x):
     try:
@@ -316,3 +319,49 @@ def collect_samples(data_dirs):
                         samples.append((hea_path, mat_path))
                     # samples.append((hea_path, mat_path))
     return samples
+
+def segments(data_path):
+    segments = []
+    samples_path = collect_samples(data_path)
+    for head_path, mat_path in samples_path:
+        head = load_header(head_path)
+        label = get_labels(head)
+        raw_signal = load_recording(mat_path, head, leads = ['II'])
+        raw_signal = np.array(raw_signal[0])
+        rpeaks = qrs_detection(raw_signal, sample_rate=500, max_bpm=300)
+        seg = get_segments(raw_signal, rpeaks, label, length=1000)
+        if(seg is None):
+            continue
+        else:
+            print(seg.shape)
+        for s in seg:
+            if(s is None):
+                continue
+            else:
+                segments.append([s[:999], s[1000]])
+    segments = np.array(segments)
+    np.save('data/segments.npy', segments)
+    return segments
+
+def get_spectrogram(segments, output_dir = './data/spectrogram', f = 500):
+    os.makedirs(output_dir, exist_ok=True)
+
+    for idx, row in tqdm(enumerate(segments), total=len(segments)):
+        signal = row[:1000]
+        label = int(row[1000])
+        label_dir = os.path.join(output_dir, str(label))
+        os.makedirs(label_dir, exist_ok=True)
+
+        f, t, Zxx = stft(signal, f=f, nperseg=128, noverlap=64)
+        spectrogram = np.abs(Zxx)
+
+        plt.figure(figsize=(2.5, 2.5))
+        plt.pcolormesh(t, f, spectrogram, shading='gouraud')
+        plt.axis('off') 
+        plt.tight_layout(pad=0)
+
+        save_path = os.path.join(label_dir, f'{idx}.png')
+        plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+        plt.close()
+
+    return output_dir

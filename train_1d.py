@@ -49,26 +49,7 @@ def train_1d_segments():
     try:
         segments = np.load('./data/segments.npy')
     except:
-        segments = []
-        samples_path = hc.collect_samples(['data/training/chapman_shaoxing','data/training/ningbo'])
-        for head_path, mat_path in samples_path:
-            head = hc.load_header(head_path)
-            label = hc.get_labels(head)
-            raw_signal = hc.load_recording(mat_path, head, leads = ['II'])
-            raw_signal = np.array(raw_signal[0])
-            rpeaks = hc.qrs_detection(raw_signal, sample_rate=500, max_bpm=300)
-            seg = hc.get_segments(raw_signal, rpeaks, label, length=1000)
-            if(seg is None):
-                continue
-            else:
-                print(seg.shape)
-            for s in seg:
-                if(s is None):
-                    continue
-                else:
-                    segments.append([s[:999], s[1000]])
-        segments = np.array(segments)
-        np.save('data/segments.npy', segments)
+        segments = hc.segments(['data/training/chapman_shaoxing','data/training/ningbo'])
 
     raw_data = ECGsegments('data/segments.npy', segments=segments, segment_length=1000)
 

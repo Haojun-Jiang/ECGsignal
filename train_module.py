@@ -56,17 +56,14 @@ def train_module(model, train_loader, val_loader, optimizer, criterion, device, 
         tr_acc = correct / total
         y_true_val_list, y_pred_val_list, y_score_list,val_loss, val_acc = evaluate(model, val_loader, criterion, device, flatten)
 
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
-            best_model_wts = model.state_dict()
-            # torch.save(best_model_wts, f'./results/best_{model_name}_wts.pt')
-
         train_loss_list.append(tr_loss)
         train_acc_list.append(tr_acc)
         val_loss_list.append(val_loss)
         val_acc_list.append(val_acc)
 
         print(f"Epoch {epoch+1}/{n_epochs} | Train Loss: {tr_loss:.3f} | Val Loss: {val_loss:.3f} | Train Acc: {tr_acc:.1%} | Val Acc: {val_acc:.1%} | Time: {time.time() - epoch_start}")
+    best_model_wts = model.state_dict()
+    torch.save(best_model_wts, f'./scr/results/best_wts.pt')
     print(f"\nTraining finished. Total time: {time.time() - total_start} seconds.")
     return {
         'train_loss': train_loss_list,
