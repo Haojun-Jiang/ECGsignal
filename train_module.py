@@ -2,9 +2,10 @@ import numpy as np
 import torch
 import time
 import matplotlib.pyplot as plt
+import os
 
 
-def train_module(model, train_loader, val_loader, optimizer, criterion, device, n_epochs, flatten=False):
+def train_module(model_name, model, train_loader, val_loader, optimizer, criterion, device, n_epochs, flatten=False):
     model = model.to('cuda')
     
     train_loss_list = []
@@ -63,7 +64,7 @@ def train_module(model, train_loader, val_loader, optimizer, criterion, device, 
 
         print(f"Epoch {epoch+1}/{n_epochs} | Train Loss: {tr_loss:.3f} | Val Loss: {val_loss:.3f} | Train Acc: {tr_acc:.1%} | Val Acc: {val_acc:.1%} | Time: {time.time() - epoch_start}")
     best_model_wts = model.state_dict()
-    torch.save(best_model_wts, f'./scr/results/best_wts.pt')
+    torch.save(best_model_wts, f'./scr/results/best_{model_name}wts.pt')
     print(f"\nTraining finished. Total time: {time.time() - total_start} seconds.")
     return {
         'train_loss': train_loss_list,
@@ -135,3 +136,4 @@ def training_plots(result_path, model_name):
     plt.show()
 
     return 0
+

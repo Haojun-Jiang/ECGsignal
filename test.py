@@ -10,21 +10,21 @@ import pywt as pw
 
 
 # print(pd.read_csv('D:\study\Msc project\project\scr\dx_mapping_scored.csv'))
-def load_label_map(txt_path):
-    with open(txt_path) as f:
-        codes = [line.strip() for line in f if line.strip()]
-    return {code: i for i, code in enumerate(codes)}
+# def load_label_map(txt_path):
+#     with open(txt_path) as f:
+#         codes = [line.strip() for line in f if line.strip()]
+#     return {code: i for i, code in enumerate(codes)}
 
-label_map = load_label_map('D:\study\Msc project\project\scr\classes.txt')
+# label_map = load_label_map('D:\study\Msc project\project\scr\classes.txt')
 
-samples_path = hc.collect_samples(['data/training/chapman_shaoxing'])
+# samples_path = hc.collect_samples(['data/training/chapman_shaoxing'])
 
-head_path, mat_path = samples_path[0]
+# head_path, mat_path = samples_path[0]
 
-head = hc.load_header(head_path)
-label = hc.get_labels(head)
-signal_1 = hc.load_recording(mat_path, header=head, leads = ['II'])  # shape (1, 5000)
-signal_1 = np.array(signal_1[0])
+# head = hc.load_header(head_path)
+# label = hc.get_labels(head)
+# signal_1 = hc.load_recording(mat_path, header=head, leads = ['II'])  # shape (1, 5000)
+# signal_1 = np.array(signal_1[0])
 # r_peaks = hc.qrs_detect(signal)
 
 # segments = hc.get_segments(signal,r_peaks, label, 1000)
@@ -130,9 +130,9 @@ def qrs_detection(signal, sample_rate=500, max_bpm=300):
 # =======================
 # ✅ 模拟 ECG 数据测试
 # =======================
-fs = 500  # 采样率
-duration = 10  # 秒
-t = np.linspace(0, 15, fs * duration)
+# fs = 500  # 采样率
+# duration = 10  # 秒
+# t = np.linspace(0, 15, fs * duration)
 # 使用简单的正弦和 sawtooth 波模仿心跳波形
 # signal = 0.6 * np.sin(2 * np.pi * 1.3 * t) + 0.4 * sawtooth(2 * np.pi * 1.3 * t)
 # print(signal)
@@ -142,9 +142,9 @@ t = np.linspace(0, 15, fs * duration)
 #     signal[loc:loc+3] += 1.5
 
 # 调用你的函数
-rpeaks = qrs_detection(signal_1, sample_rate=fs)
+# rpeaks = qrs_detection(signal_1, sample_rate=fs)
 
-segments = hc.get_segments(signal_1, rpeaks, label, length=1000)
+# segments = hc.get_segments(signal_1, rpeaks, label, length=1000)
 
 # =======================
 # ✅ 可视化结果
@@ -159,3 +159,23 @@ segments = hc.get_segments(signal_1, rpeaks, label, length=1000)
 # plt.grid(True)
 # plt.tight_layout()
 # plt.show()
+segments = np.load("D:\study\Msc project\project\data\segments.npy")
+segments = hc.resample_data(segments)
+labels = segments[:,1000].astype(int)
+unique_labels = np.unique(labels)
+label_counts = np.bincount(labels)
+print(f"count of each label: {label_counts}")
+
+plt.figure(figsize=(10, 6))
+plt.bar(unique_labels, [label_counts[i] for i in unique_labels])
+plt.xlabel('label')
+plt.ylabel('number')
+plt.title('number of each label')
+plt.xticks(unique_labels)
+
+# 在柱状图上显示数值
+for i, label in enumerate(unique_labels):
+    plt.text(label, label_counts[label] + max(label_counts)*0.01, 
+             str(label_counts[label]), ha='center')
+
+plt.show()

@@ -5,6 +5,7 @@ import pywt as pw
 import matplotlib.pyplot as plt
 from scipy.signal import stft
 from tqdm import tqdm
+from sklearn.utils import resample
 
 def is_number(x):
     try:
@@ -343,18 +344,18 @@ def segments(data_path):
     np.save('data/segments.npy', segments)
     return segments
 
-def get_spectrogram(segments, output_dir = './data/spectrogram', f = 500):
+def get_spectrogram(segments, output_dir = './data/spectrogram', fs = 500):
     os.makedirs(output_dir, exist_ok=True)
-
+    print(-1)
     for idx, row in tqdm(enumerate(segments), total=len(segments)):
         signal = row[:1000]
         label = int(row[1000])
         label_dir = os.path.join(output_dir, str(label))
         os.makedirs(label_dir, exist_ok=True)
 
-        f, t, Zxx = stft(signal, f=f, nperseg=128, noverlap=64)
+        f, t, Zxx = stft(signal, fs=fs, nperseg=128, noverlap=64)
         spectrogram = np.abs(Zxx)
-
+        print(0)
         plt.figure(figsize=(2.5, 2.5))
         plt.pcolormesh(t, f, spectrogram, shading='gouraud')
         plt.axis('off') 
@@ -363,5 +364,19 @@ def get_spectrogram(segments, output_dir = './data/spectrogram', f = 500):
         save_path = os.path.join(label_dir, f'{idx}.png')
         plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
         plt.close()
+        print(1)
 
     return output_dir
+
+def resample_data(samples):
+    samples_0 = [s for s in samples if s[1000] == 0]
+    samples_1 = [s for s in samples if s[1000] == 1]
+    samples_2 = [s for s in samples if s[1000] == 2]
+    samples_3 = [s for s in samples if s[1000] == 3]
+    samples_2_down = resample(samples_2, replace=False, n_samples=40000, random_state=42)
+    samples_3_down = resample(samples_3, replace=False, n_samples=40000, random_state=42)
+    samples_0_down = resample(samples_0, replace=False, n_samples=40000, random_state=42)
+    samples_1_up = resample(samples_1, replace=True, n_samples=40000, random_state=42)
+    balanced_samples = samples_0_down + samples_1_up + samples_2_down + samples_3_down
+    balanced_samples = np.array(balanced_samples)
+    return balanced_samples

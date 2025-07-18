@@ -32,7 +32,7 @@ def train_1d():
     train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=128, shuffle=True)
 
-    results = train_module(cnn_feed_rnn, train_loader, val_loader, optimizer, criterion, device='cuda',n_epochs=50)
+    results = train_module("1dcnn_rawdata", cnn_feed_rnn, train_loader, val_loader, optimizer, criterion, device='cuda',n_epochs=50)
     return results
 
 # results=train_1d()
@@ -50,16 +50,16 @@ def train_1d_segments():
         segments = np.load('./data/segments.npy')
     except:
         segments = hc.segments(['data/training/chapman_shaoxing','data/training/ningbo'])
-
-    raw_data = ECGsegments('data/segments.npy', segments=segments, segment_length=1000)
+    resampled_segments = hc.resample_data(segments)
+    raw_data = ECGsegments('data/segments.npy', segments=resampled_segments, segment_length=1000)
 
     train_dataset, val_dataset = random_split(raw_data, [int(len(raw_data)*0.8), len(raw_data)-int(len(raw_data)*0.8)])
     train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=128, shuffle=True)
 
-    results = train_module(cnn_feed_rnn, train_loader, val_loader, optimizer, criterion, device='cuda',n_epochs=2)
+    results = train_module("segments_feed",cnn_feed_rnn, train_loader, val_loader, optimizer, criterion, device='cuda',n_epochs=50)
     return results
 
 results = train_1d_segments()
 os.makedirs('./traininglog', exist_ok=True)
-torch.save(results, f"traininglog/train_1d_segments.pt")
+torch.save(results, f"traininglog/train_1d_segments_balanced.pt")

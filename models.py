@@ -6,7 +6,7 @@ import numpy as np
 
 class cnn_1d(nn.Module):
     def __init__(self, classes_n = 4):
-        super(cnn_1d, self).__init__() # input 1 x 5000
+        super(cnn_1d, self).__init__() # input 1 x 1000
         self.features = nn.Sequential(
             nn.Conv1d(1, 32, kernel_size=3, padding=1),
             nn.BatchNorm1d(32),
@@ -14,7 +14,7 @@ class cnn_1d(nn.Module):
             nn.Conv1d(32, 32, kernel_size=3, padding=1),
             nn.BatchNorm1d(32),
             nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2),  # => 32 × 2500
+            nn.MaxPool1d(kernel_size=2),  # => 32
             nn.Dropout(0.1),
 
             nn.Conv1d(32, 64, kernel_size=3, padding=1),
@@ -23,24 +23,24 @@ class cnn_1d(nn.Module):
             nn.Conv1d(64, 64, kernel_size=3, padding=1),
             nn.BatchNorm1d(64),
             nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2),  # => 64 × 1250
+            nn.MaxPool1d(kernel_size=2),  # => 64
             nn.Dropout(0.1),
 
             nn.Conv1d(64, 128, kernel_size=3, padding=1),
             nn.BatchNorm1d(128),
             nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2),  # => 128 × 625
+            nn.MaxPool1d(kernel_size=2),  # => 128
             nn.Dropout(0.1),
 
             nn.Conv1d(128, 256, kernel_size=3, padding=1),
             nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2),  # => 256 × 312
+            nn.MaxPool1d(kernel_size=2),  # => 256
             nn.Dropout(0.1),
         )
 
         self.classifier = nn.Sequential(
-            nn.Linear(256 * 312, 256),
+            nn.Linear(256 * 312, 256), # 1*5000 input
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(256, classes_n)
@@ -94,3 +94,36 @@ class cnn_feed_lstm(nn.Module):
         out = self.lstm(feature)
         return out
 
+class CNN2D_3layers(nn.Module):
+    def __init__(self):
+        super(CNN2D_3layers, self).__init__()
+        self.feature = nn.Sequential(
+            nn.Conv2d(1, 8, kernel_size=4, padding=0),# (255, 255)
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),# (125, 125)
+
+            nn.Conv2d(8, 32, kernel_size=2),# (125, 125)
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),# (62, 62)
+
+            nn.Conv2d(32, 64, kernel_size=2),# (61, 61)
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2), # (30, 30)
+        )
+
+    def forward(self, x):
+        x = self.feature(x)# shape: (B, 64, 30, 30)
+        return x
+
+class CNN2D_feed_lstm(nn.Module):
+    def __init__(self, cnn_model, rnn_model, n_classes=4):
+        super(CNN2D_feed_lstm, self).__init__()
+        self.cnn = cnn_model
+        self.rnn = rnn_model
+
+    def forward(self, x):
+        feature = self.cnn(x)
+        feature = feature.permute(0, 3, 1, 2)      # (B, 30, 64, 30)
+        feature = feature.reshape(feature.size(0), 30, -1)        # (B, 30, 64×30)
+        out = self.rnn(feature)
+        return out
